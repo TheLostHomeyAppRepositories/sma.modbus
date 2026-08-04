@@ -3,22 +3,26 @@
     $(function () {
         $('#connect').click(function () {
             $('.sma-error').hide();
-            var inputaddress = $('#address').val();
+            var inputaddress = $('#address').val().trim();
             if (inputaddress != '') {
                 var settings = {
                     address: inputaddress
                 };
-                Homey.emit('settings', settings).then(function (result) {
-                    //Afraid we will never see anything but null here
-                    console.log(result);
-                    $('.sma-error').show();
-                    $('.sma-error-msg').html('Verifying device connection ...');
+                $('#connect').prop('disabled', true);
+                $('.sma-error').show();
+                $('.sma-error-msg').html(__('pair.verifying'));
 
-                    //if (!result) {
-                    //    $('.sma-error').show();
-                    //    $('.sma-error-msg').html('Failed to connect to the battery!');
-                    //}
-                });
+                Homey.emit('settings', settings)
+                    .then(function () {
+                        // Success: the driver completes the repair session itself.
+                    })
+                    .catch(function (err) {
+                        // Without this the rejection was swallowed and the view
+                        // sat on 'verifying' forever with no explanation.
+                        $('#connect').prop('disabled', false);
+                        $('.sma-error').show();
+                        $('.sma-error-msg').html((err && err.message) ? err.message : __('pair.failed'));
+                    });
             } else {
                 $('.sma-error').show();
                 $('.sma-error-msg').html(__('battery_repair.nosettings'));

@@ -10,7 +10,10 @@
     "address": "IP Adress",
     "port": "Port",
     "polling": "Uppdateringsfrekvens",
-    "connect": "Anslut"
+    "connect": "Anslut",
+    "connecting": "Ansluter ...",
+    "verifying": "Verifierar anslutningen till enheten ...",
+    "failed": "Kunde inte ansluta till enheten."
   },
   "repair": {
     "title": "Reparera SMA växelriktare",

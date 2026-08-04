@@ -182,31 +182,28 @@ class InverterDriver extends Driver {
             });
 
             try {
-                await new Promise((resolve, reject) => {
-                    smaSession.on('properties', inverterProperties => {
-                        this.log(`Adding to devices: ${inverterProperties.deviceType}`);
-                        devices.push({
-                            name: inverterProperties.deviceType,
-                            data: {
-                                id: inverterProperties.serialNo
-                            },
-                            settings: {
-                                address: settings.address,
-                                port: Number(this.homey.settings.get('port'))
-                            }
-                        });
-                        resolve();
-                    });
+                const inverterProperties = await utilFunctions.waitForProperties(smaSession);
 
-                    smaSession.on('error', error => {
-                        this.log(`Failed to read inverter properties: ${utilFunctions.formatError(error)}`);
-                        reject(error);
-                    });
+                this.log(`Adding to devices: ${inverterProperties.deviceType}`);
+                devices.push({
+                    name: inverterProperties.deviceType,
+                    data: {
+                        id: inverterProperties.serialNo
+                    },
+                    settings: {
+                        address: settings.address,
+                        port: Number(this.homey.settings.get('port'))
+                    }
                 });
 
                 await session.showView('list_devices');
             } catch (error) {
-                throw new Error('Wrong IP number or port, no SMA inverter found', { cause: error });
+                this.log(`Failed to read inverter properties: ${utilFunctions.formatError(error)}`);
+                // Include the underlying reason. The pairing view shows this
+                // message verbatim, and 'wrong IP or port' alone sends users
+                // looking in the wrong place when the real cause was a timeout
+                // or a refused connection.
+                throw new Error(`No SMA inverter found at '${settings.address}'. ${utilFunctions.formatError(error)}`, { cause: error });
             }
         });
 
@@ -290,29 +287,21 @@ class InverterDriver extends Driver {
             });
 
             try {
-                await new Promise((resolve, reject) => {
-                    smaSession.on('properties', inverterProperties => {
-                        // Verify this is the same device
-                        if (inverterProperties.serialNo === currentSerial) {
-                            this.log(`Manual entry verified: ${inverterProperties.deviceType}`);
-                            repairDevices.push({
-                                name: inverterProperties.deviceType,
-                                data: deviceData, // Keep the same device data
-                                settings: {
-                                    address: data.address,
-                                    port: Number(this.homey.settings.get('port'))
-                                }
-                            });
-                            resolve();
-                        } else {
-                            reject(new Error(`Device serial number mismatch. Expected: ${currentSerial}, Found: ${inverterProperties.serialNo}`));
-                        }
-                    });
+                const inverterProperties = await utilFunctions.waitForProperties(smaSession);
 
-                    smaSession.on('error', error => {
-                        this.log(`Failed to read inverter properties during repair: ${utilFunctions.formatError(error)}`);
-                        reject(error);
-                    });
+                // Verify this is the same device
+                if (inverterProperties.serialNo !== currentSerial) {
+                    throw new Error(`Device serial number mismatch. Expected: ${currentSerial}, Found: ${inverterProperties.serialNo}`);
+                }
+
+                this.log(`Manual entry verified: ${inverterProperties.deviceType}`);
+                repairDevices.push({
+                    name: inverterProperties.deviceType,
+                    data: deviceData, // Keep the same device data
+                    settings: {
+                        address: data.address,
+                        port: Number(this.homey.settings.get('port'))
+                    }
                 });
 
                 // Complete repair with the updated settings

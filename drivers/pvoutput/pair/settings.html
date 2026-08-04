@@ -17,13 +17,21 @@
                     start_reporting: inputstart,
                     stop_reporting: inputstop
                 };
-                Homey.emit('settings', settings).then(function (result) {
-                    console.log(result);
-                    if (!results) {
+                $('#connect').prop('disabled', true);
+
+                Homey.emit('settings', settings)
+                    .then(function () {
+                        // Success: the driver has already moved us to the device
+                        // list view, so there is nothing to render here.
+                    })
+                    .catch(function (err) {
+                        // Previously this branch tested an undefined 'results'
+                        // variable inside .then() and had no .catch(), so a
+                        // failure threw a ReferenceError and showed nothing.
+                        $('#connect').prop('disabled', false);
                         $('.sma-error').show();
-                        $('.sma-error-msg').html('Failed to connect to the inverter!');
-                    }
-                });
+                        $('.sma-error-msg').html((err && err.message) ? err.message : __('pair.failed'));
+                    });
             } else {
                 $('.sma-error').show();
                 $('.sma-error-msg').html(__('pair.nosettings'));

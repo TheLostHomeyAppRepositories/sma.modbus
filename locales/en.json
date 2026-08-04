@@ -10,7 +10,10 @@
     "address": "IP Address",
     "port": "Port",
     "polling": "Polling Frequency",
-    "connect": "Connect"
+    "connect": "Connect",
+    "connecting": "Connecting ...",
+    "verifying": "Verifying device connection ...",
+    "failed": "Failed to connect to the device."
   },
   "repair": {
     "title": "Repair SMA Inverter",

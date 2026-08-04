@@ -105,31 +105,28 @@ class BatteryDriver extends Driver {
             });
 
             try {
-                await new Promise((resolve, reject) => {
-                    smaSession.on('properties', inverterProperties => {
-                        this.log(`Adding to devices: ${inverterProperties.deviceType}`);
-                        devices.push({
-                            name: inverterProperties.deviceType,
-                            data: {
-                                id: inverterProperties.serialNo
-                            },
-                            settings: {
-                                address: settings.address,
-                                port: Number(this.homey.settings.get('port'))
-                            }
-                        });
-                        resolve();
-                    });
+                const deviceProperties = await utilFunctions.waitForProperties(smaSession);
 
-                    smaSession.on('error', error => {
-                        this.log(`Failed to read device properties: ${utilFunctions.formatError(error)}`);
-                        reject(error);
-                    });
+                this.log(`Adding to devices: ${deviceProperties.deviceType}`);
+                devices.push({
+                    name: deviceProperties.deviceType,
+                    data: {
+                        id: deviceProperties.serialNo
+                    },
+                    settings: {
+                        address: settings.address,
+                        port: Number(this.homey.settings.get('port'))
+                    }
                 });
 
                 await session.showView('list_devices');
             } catch (error) {
-                throw new Error('Wrong IP number or port, no SMA device found', { cause: error });
+                this.log(`Failed to read device properties: ${utilFunctions.formatError(error)}`);
+                // Include the underlying reason. The pairing view shows this
+                // message verbatim, and 'wrong IP or port' alone sends users
+                // looking in the wrong place when the real cause was a timeout
+                // or a refused connection.
+                throw new Error(`No SMA device found at '${settings.address}'. ${utilFunctions.formatError(error)}`, { cause: error });
             }
         });
 
@@ -213,29 +210,21 @@ class BatteryDriver extends Driver {
             });
 
             try {
-                await new Promise((resolve, reject) => {
-                    smaSession.on('properties', deviceProperties => {
-                        // Verify this is the same device
-                        if (deviceProperties.serialNo === currentSerial) {
-                            this.log(`Manual entry verified: ${deviceProperties.deviceType}`);
-                            repairDevices.push({
-                                name: deviceProperties.deviceType,
-                                data: deviceData, // Keep the same device data
-                                settings: {
-                                    address: data.address,
-                                    port: Number(this.homey.settings.get('port'))
-                                }
-                            });
-                            resolve();
-                        } else {
-                            reject(new Error(`Device serial number mismatch. Expected: ${currentSerial}, Found: ${deviceProperties.serialNo}`));
-                        }
-                    });
+                const deviceProperties = await utilFunctions.waitForProperties(smaSession);
 
-                    smaSession.on('error', error => {
-                        this.log(`Failed to read device properties during repair: ${utilFunctions.formatError(error)}`);
-                        reject(error);
-                    });
+                // Verify this is the same device
+                if (deviceProperties.serialNo !== currentSerial) {
+                    throw new Error(`Device serial number mismatch. Expected: ${currentSerial}, Found: ${deviceProperties.serialNo}`);
+                }
+
+                this.log(`Manual entry verified: ${deviceProperties.deviceType}`);
+                repairDevices.push({
+                    name: deviceProperties.deviceType,
+                    data: deviceData, // Keep the same device data
+                    settings: {
+                        address: data.address,
+                        port: Number(this.homey.settings.get('port'))
+                    }
                 });
 
                 // Complete repair with the updated settings

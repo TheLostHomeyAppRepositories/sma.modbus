@@ -10,7 +10,10 @@
     "address": "IP adres",
     "port": "Poort",
     "polling": "Polling frequentie",
-    "connect": "Verbind"
+    "connect": "Verbind",
+    "connecting": "Verbinden ...",
+    "verifying": "Verbinding met apparaat verifiëren ...",
+    "failed": "Kan geen verbinding maken met het apparaat."
   },
   "repair": {
     "title": "SMA omvormer repareren",
