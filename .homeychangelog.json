@@ -1,4 +1,8 @@
 {
+  "2.10.3": {
+    "en": "Fixed Modbus reconnection retries and improved device repair by preventing competing connections and reliably resuming communication.",
+    "sv": "Åtgärdade återanslutningsförsök för Modbus och förbättrade enhetsreparation genom att förhindra konkurrerande anslutningar och återuppta kommunikationen på ett tillförlitligt sätt."
+  },
   "2.10.2": {
     "en": "Pairing and repair no longer get stuck on \"connecting\" without feedback: connection failures are now always reported in the pairing screen, together with the reason, and can no longer wait indefinitely. Also adds a short pause before connecting so devices that allow only one Modbus connection have time to release it.",
     "sv": "Parkoppling och reparation fastnar inte längre på \"ansluter\" utan återkoppling: anslutningsfel visas nu alltid i parkopplingsdialogen tillsammans med orsaken, och kan inte längre vänta i oändlighet. Lägger även till en kort paus innan anslutning så att enheter som bara tillåter en Modbus-anslutning hinner släppa den."

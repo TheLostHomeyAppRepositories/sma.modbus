@@ -72,29 +72,37 @@ class InverterDevice extends ModbusDevice {
     }
 
     async setupSession(address, port, polling, timeout) {
-        this.api = new Inverter({
+        const api = new Inverter({
             host: address,
             port: port,
             refreshInterval: polling,
             timeout: timeout,
             device: this
         });
+        this.api = api;
 
-        await this.initializeEventListeners();
+        await this.initializeEventListeners(api);
+        await api.waitUntilReady();
     }
 
-    async initializeEventListeners() {
-        this.api.on('readings', this.handleReadingsEvent.bind(this));
-        this.api.on('properties', this.handlePropertiesEvent.bind(this));
-        this.api.on('error', this.handleErrorEvent.bind(this));
+    async initializeEventListeners(api = this.api) {
+        api.on('readings', this.handleReadingsEvent.bind(this));
+        api.on('properties', this.handlePropertiesEvent.bind(this));
+        api.on('error', error => this.handleErrorEvent(error, api));
     }
 
-    async handleErrorEvent(error) {
+    async handleErrorEvent(error, api = this.api) {
+        if (api !== this.api) {
+            return;
+        }
+
         // Handle the error with base device error handling
         await this._handleErrorEvent(error);
 
-        // Also check if this is a communication error that should trigger reconnection
-        await this.onCommunicationError(error);
+        // A replacement may have occurred while Homey handled the error.
+        if (api === this.api) {
+            await this.onCommunicationError(error);
+        }
     }
 
     async handleReadingsEvent(readings) {

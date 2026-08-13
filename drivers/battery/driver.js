@@ -141,99 +141,108 @@ class BatteryDriver extends Driver {
 
     async onRepair(session, device) {
         this.log(`[${device.getName()}] Starting repair process`);
-        
+
         const repairDevices = [];
         let mode = 'discovery';
         const deviceData = device.getData();
         const currentSerial = deviceData.id;
 
+        const withSuspendedConnection = async (operation) => {
+            await device.suspendConnectionForRepair();
+            try {
+                return await operation();
+            } finally {
+                await device.resumeConnectionAfterRepair().catch(error => {
+                    this.error(`Failed to resume device after repair: ${utilFunctions.formatError(error)}`);
+                });
+            }
+        };
+
         session.setHandler('showView', async (view) => {
             this.log(`Repair: Showing view '${view}'`);
 
             if (view === 'loading') {
-                mode = 'discovery';
-                repairDevices.splice(0, repairDevices.length);
+                await withSuspendedConnection(async () => {
+                    mode = 'discovery';
+                    repairDevices.splice(0, repairDevices.length);
 
-                // Use the same discovery mechanism as pairing
-                const discoveryQuery = new BatteryDiscovery({
-                    port: this.homey.settings.get('port'),
-                    device: this
-                });
+                    const discoveryQuery = new BatteryDiscovery({
+                        port: this.homey.settings.get('port'),
+                        device: this
+                    });
 
-                try {
-                    const devicesFound = await discoveryQuery.discover();
+                    try {
+                        const devicesFound = await discoveryQuery.discover();
 
-                    // Look for the specific device we're trying to repair
-                    for (const deviceInfo of devicesFound) {
-                        // Check if this is the same device (matching serial number)
-                        if (deviceInfo.serialNo === currentSerial) {
-                            this.log(`Found matching device: ${deviceInfo.deviceType} at ${deviceInfo.address}`);
-                            repairDevices.push({
-                                name: deviceInfo.deviceType,
-                                data: deviceData, // Keep the same device data
-                                settings: {
-                                    address: deviceInfo.address,
-                                    port: Number(deviceInfo.port),
-                                    deviceClass: decodeData.decodeDeviceClass(deviceInfo.deviceClass)
-                                }
-                            });
-                            break;
+                        for (const deviceInfo of devicesFound) {
+                            if (deviceInfo.serialNo === currentSerial) {
+                                this.log(`Found matching device: ${deviceInfo.deviceType} at ${deviceInfo.address}`);
+                                repairDevices.push({
+                                    name: deviceInfo.deviceType,
+                                    data: deviceData,
+                                    settings: {
+                                        address: deviceInfo.address,
+                                        port: Number(deviceInfo.port),
+                                        deviceClass: decodeData.decodeDeviceClass(deviceInfo.deviceClass)
+                                    }
+                                });
+                                break;
+                            }
                         }
-                    }
 
-                    if (repairDevices.length === 0) {
-                        this.log('Device not found using auto-discovery, show manual entry');
+                        if (repairDevices.length === 0) {
+                            this.log('Device not found using auto-discovery, show manual entry');
+                            await session.showView('settings');
+                        } else {
+                            this.log('Found device for repair, updating settings');
+                            const deviceSettings = repairDevices[0].settings;
+                            this.log(`Repair completed with settings: ${utilFunctions.formatError(deviceSettings)}`);
+                            await session.done(deviceSettings);
+                        }
+                    } catch (error) {
+                        this.log(`Auto-discovery failed during repair, showing manual entry: ${utilFunctions.formatError(error)}`);
                         await session.showView('settings');
-                    } else {
-                        this.log('Found device for repair, updating settings');
-                        // Complete repair with the new settings
-                        const deviceSettings = repairDevices[0].settings;
-                        this.log(`Repair completed with settings: ${utilFunctions.formatError(deviceSettings)}`);
-                        await session.done(deviceSettings);
                     }
-                } catch (error) {
-                    this.log(`Auto-discovery failed during repair, showing manual entry: ${utilFunctions.formatError(error)}`);
-                    await session.showView('settings');
-                }
+                });
             }
         });
 
         session.setHandler('settings', async (data) => {
-            mode = 'manual';
-            repairDevices.splice(0, repairDevices.length);
+            return withSuspendedConnection(async () => {
+                mode = 'manual';
+                repairDevices.splice(0, repairDevices.length);
 
-            const smaSession = new Battery({
-                host: data.address,
-                port: this.homey.settings.get('port'),
-                autoClose: true,
-                device: this
-            });
-
-            try {
-                const deviceProperties = await utilFunctions.waitForProperties(smaSession);
-
-                // Verify this is the same device
-                if (deviceProperties.serialNo !== currentSerial) {
-                    throw new Error(`Device serial number mismatch. Expected: ${currentSerial}, Found: ${deviceProperties.serialNo}`);
-                }
-
-                this.log(`Manual entry verified: ${deviceProperties.deviceType}`);
-                repairDevices.push({
-                    name: deviceProperties.deviceType,
-                    data: deviceData, // Keep the same device data
-                    settings: {
-                        address: data.address,
-                        port: Number(this.homey.settings.get('port'))
-                    }
+                const smaSession = new Battery({
+                    host: data.address,
+                    port: this.homey.settings.get('port'),
+                    autoClose: true,
+                    device: this
                 });
 
-                // Complete repair with the updated settings
-                const deviceSettings = repairDevices[0].settings;
-                this.log(`Manual repair completed with settings: ${utilFunctions.formatError(deviceSettings)}`);
-                await session.done(deviceSettings);
-            } catch (error) {
-                throw new Error(`Unable to verify device identity. ${utilFunctions.formatError(error)}`, { cause: error });
-            }
+                try {
+                    const deviceProperties = await utilFunctions.waitForProperties(smaSession);
+
+                    if (deviceProperties.serialNo !== currentSerial) {
+                        throw new Error(`Device serial number mismatch. Expected: ${currentSerial}, Found: ${deviceProperties.serialNo}`);
+                    }
+
+                    this.log(`Manual entry verified: ${deviceProperties.deviceType}`);
+                    repairDevices.push({
+                        name: deviceProperties.deviceType,
+                        data: deviceData,
+                        settings: {
+                            address: data.address,
+                            port: Number(this.homey.settings.get('port'))
+                        }
+                    });
+
+                    const deviceSettings = repairDevices[0].settings;
+                    this.log(`Manual repair completed with settings: ${utilFunctions.formatError(deviceSettings)}`);
+                    await session.done(deviceSettings);
+                } catch (error) {
+                    throw new Error(`Unable to verify device identity. ${utilFunctions.formatError(error)}`, { cause: error });
+                }
+            });
         });
     }
 }
