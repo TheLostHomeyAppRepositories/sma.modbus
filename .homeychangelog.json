@@ -1,4 +1,8 @@
 {
+  "2.10.4": {
+    "en": "Manual pairing now accepts an address entered as \"IP:port\" and, when a device cannot be reached, explains what to check - including that Modbus has to be enabled on the SMA device. Device search also releases its network port afterwards, so a repeated search no longer risks finding nothing.",
+    "sv": "Manuell parkoppling accepterar nu adresser angivna som \"IP:port\" och förklarar, när en enhet inte kan nås, vad som bör kontrolleras - bland annat att Modbus måste vara aktiverat i SMA-enheten. Enhetssökningen frigör dessutom sin nätverksport efteråt, så att en upprepad sökning inte riskerar att inte hitta något."
+  },
   "2.10.3": {
     "en": "Fixed Modbus reconnection retries and improved device repair by preventing competing connections and reliably resuming communication.",
     "sv": "Åtgärdade återanslutningsförsök för Modbus och förbättrade enhetsreparation genom att förhindra konkurrerande anslutningar och återuppta kommunikationen på ett tillförlitligt sätt."

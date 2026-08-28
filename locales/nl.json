@@ -13,7 +13,9 @@
     "connect": "Verbind",
     "connecting": "Verbinden ...",
     "verifying": "Verbinding met apparaat verifiëren ...",
-    "failed": "Kan geen verbinding maken met het apparaat."
+    "failed": "Kan geen verbinding maken met het apparaat.",
+    "invalid_address": "Voer een geldig IPv4-adres in, bijvoorbeeld 192.168.1.50.",
+    "connection_hint": "Controleer of het apparaat bereikbaar is op dit IP-adres en of Modbus TCP is ingeschakeld op het apparaat (standaardpoort 502). Bij oudere omvormers is Modbus standaard uitgeschakeld en wordt dit ingeschakeld met Sunny Explorer of de webinterface van het apparaat."
   },
   "repair": {
     "title": "SMA omvormer repareren",

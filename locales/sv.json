@@ -13,7 +13,9 @@
     "connect": "Anslut",
     "connecting": "Ansluter ...",
     "verifying": "Verifierar anslutningen till enheten ...",
-    "failed": "Kunde inte ansluta till enheten."
+    "failed": "Kunde inte ansluta till enheten.",
+    "invalid_address": "Ange en giltig IPv4-adress, till exempel 192.168.1.50.",
+    "connection_hint": "Kontrollera att enheten är nåbar på denna IP-adress och att Modbus TCP är aktiverat i enheten (standardport 502). På äldre växelriktare är Modbus avstängt som standard och aktiveras med Sunny Explorer eller enhetens webbgränssnitt."
   },
   "repair": {
     "title": "Reparera SMA växelriktare",

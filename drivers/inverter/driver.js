@@ -108,7 +108,6 @@ class InverterDriver extends Driver {
     async onPair(session) {
         const devices = [];
         let mode;
-        let settings;
 
         session.setHandler('showView', async (view) => {
             this.log(`Showing view '${view}'`);
@@ -170,13 +169,19 @@ class InverterDriver extends Driver {
 
         session.setHandler('settings', async (data) => {
             mode = 'manual';
-            settings = data;
             //Make sure devices array is empty
             devices.splice(0, devices.length);
 
+            // Accepts 'IP' as well as 'IP:port', which is what users tend to paste.
+            const target = utilFunctions.resolveManualAddress(data.address, this.homey.settings.get('port'));
+            if (!target) {
+                this.log(`Rejecting manual entry, '${data.address}' is not a valid address`);
+                throw new Error(this.homey.__('pair.invalid_address'));
+            }
+
             const smaSession = new Inverter({
-                host: settings.address,
-                port: this.homey.settings.get('port'),
+                host: target.host,
+                port: target.port,
                 autoClose: true,
                 device: this
             });
@@ -191,19 +196,19 @@ class InverterDriver extends Driver {
                         id: inverterProperties.serialNo
                     },
                     settings: {
-                        address: settings.address,
-                        port: Number(this.homey.settings.get('port'))
+                        address: target.host,
+                        port: target.port
                     }
                 });
 
                 await session.showView('list_devices');
             } catch (error) {
                 this.log(`Failed to read inverter properties: ${utilFunctions.formatError(error)}`);
-                // Include the underlying reason. The pairing view shows this
-                // message verbatim, and 'wrong IP or port' alone sends users
-                // looking in the wrong place when the real cause was a timeout
-                // or a refused connection.
-                throw new Error(`No SMA inverter found at '${settings.address}'. ${utilFunctions.formatError(error)}`, { cause: error });
+                // Include the underlying reason plus what to check. The pairing view
+                // shows this message verbatim, and 'wrong IP or port' alone sends
+                // users looking in the wrong place when the real cause was a timeout
+                // or Modbus being disabled on the device.
+                throw new Error(`No SMA inverter found at '${target.host}:${target.port}'. ${utilFunctions.formatError(error)} ${this.homey.__('pair.connection_hint')}`, { cause: error });
             }
         });
 
@@ -293,11 +298,17 @@ class InverterDriver extends Driver {
                 mode = 'manual';
                 repairDevices.splice(0, repairDevices.length);
 
+                const target = utilFunctions.resolveManualAddress(data.address, this.homey.settings.get('port'));
+                if (!target) {
+                    this.log(`Rejecting manual entry, '${data.address}' is not a valid address`);
+                    throw new Error(this.homey.__('pair.invalid_address'));
+                }
+
                 // autoClose now performs identity/property reads on one bounded
                 // socket instead of opening a separate validator connection first.
                 const smaSession = new Inverter({
-                    host: data.address,
-                    port: this.homey.settings.get('port'),
+                    host: target.host,
+                    port: target.port,
                     autoClose: true,
                     device: this
                 });
@@ -314,8 +325,8 @@ class InverterDriver extends Driver {
                         name: inverterProperties.deviceType,
                         data: deviceData,
                         settings: {
-                            address: data.address,
-                            port: Number(this.homey.settings.get('port'))
+                            address: target.host,
+                            port: target.port
                         }
                     });
 
@@ -323,7 +334,7 @@ class InverterDriver extends Driver {
                     this.log(`Manual repair completed with settings: ${utilFunctions.formatError(deviceSettings)}`);
                     await session.done(deviceSettings);
                 } catch (error) {
-                    throw new Error(`Unable to verify device identity. ${utilFunctions.formatError(error)}`, { cause: error });
+                    throw new Error(`Unable to verify device identity. ${utilFunctions.formatError(error)} ${this.homey.__('pair.connection_hint')}`, { cause: error });
                 }
             });
         });
