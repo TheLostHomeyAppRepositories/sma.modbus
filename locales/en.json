@@ -15,6 +15,7 @@
     "verifying": "Verifying device connection ...",
     "failed": "Failed to connect to the device.",
     "invalid_address": "Enter a valid IPv4 address, for example 192.168.1.50.",
+    "no_battery_attached": "'__deviceType__' is a hybrid inverter without a battery attached. Add it as an inverter instead.",
     "connection_hint": "Check that the device is reachable at this IP address and that Modbus TCP is enabled on the device (default port 502). On older inverters Modbus is disabled by default and is enabled with Sunny Explorer or the device web interface."
   },
   "repair": {

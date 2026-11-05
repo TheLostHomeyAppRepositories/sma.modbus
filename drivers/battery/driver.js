@@ -61,6 +61,14 @@ class BatteryDriver extends Driver {
         });
     }
 
+    // A hybrid inverter (e.g. STP x.0-3SE-40, Sunny Boy Smart Energy) can run
+    // without a battery. It still reports its device class as hybrid, but the
+    // battery state of charge reads as NaN. Pairing such a device as a battery
+    // gives a permanently 'empty' battery in Homey, so we don't offer it.
+    hasNoBatteryAttached(properties) {
+        return Number(properties.deviceClass) === 8009 && properties.batterySoCInfo === null;
+    }
+
     isDeviceNew(deviceId) {
         let foundNewDevice = true;
         for (const device of this.getDevices()) {
@@ -99,7 +107,9 @@ class BatteryDriver extends Driver {
                         // 8007: Battery Inverter (DevClss7)
                         // 8009: Hybrid Inverter (DevClss9)
                         if (device.deviceClass == 8007 || device.deviceClass == 8009) {
-                            if (this.isDeviceNew(device.serialNo)) {
+                            if (this.hasNoBatteryAttached(device)) {
+                                this.log(`Found hybrid inverter '${device.deviceType}' without a battery attached, ignoring it ...`);
+                            } else if (this.isDeviceNew(device.serialNo)) {
                                 this.log(`Adding to devices: ${device.deviceType}`);
                                 devices.push({
                                     name: device.deviceType,
@@ -153,22 +163,9 @@ class BatteryDriver extends Driver {
                 device: this
             });
 
+            let deviceProperties;
             try {
-                const deviceProperties = await utilFunctions.waitForProperties(smaSession);
-
-                this.log(`Adding to devices: ${deviceProperties.deviceType}`);
-                devices.push({
-                    name: deviceProperties.deviceType,
-                    data: {
-                        id: deviceProperties.serialNo
-                    },
-                    settings: {
-                        address: target.host,
-                        port: target.port
-                    }
-                });
-
-                await session.showView('list_devices');
+                deviceProperties = await utilFunctions.waitForProperties(smaSession);
             } catch (error) {
                 this.log(`Failed to read device properties: ${utilFunctions.formatError(error)}`);
                 // Include the underlying reason plus what to check. The pairing view
@@ -177,6 +174,25 @@ class BatteryDriver extends Driver {
                 // or Modbus being disabled on the device.
                 throw new Error(`No SMA device found at '${target.host}:${target.port}'. ${utilFunctions.formatError(error)} ${this.homey.__('pair.connection_hint')}`, { cause: error });
             }
+
+            if (this.hasNoBatteryAttached(deviceProperties)) {
+                this.log(`Rejecting manual entry, '${deviceProperties.deviceType}' has no battery attached`);
+                throw new Error(this.homey.__('pair.no_battery_attached', { deviceType: deviceProperties.deviceType }));
+            }
+
+            this.log(`Adding to devices: ${deviceProperties.deviceType}`);
+            devices.push({
+                name: deviceProperties.deviceType,
+                data: {
+                    id: deviceProperties.serialNo
+                },
+                settings: {
+                    address: target.host,
+                    port: target.port
+                }
+            });
+
+            await session.showView('list_devices');
         });
 
         session.setHandler('list_devices', async (data) => {

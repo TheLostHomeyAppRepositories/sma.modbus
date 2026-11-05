@@ -84,7 +84,10 @@ class BatteryDevice extends ModbusDevice {
                 chargingState = 'discharging';
             }
 
-            const batterySoC = Number.isFinite(readings.batterySoC) ? readings.batterySoC : 0;
+            // Leave the state of charge empty when the device has no value (e.g. a
+            // hybrid inverter without a battery). Reporting 0 makes Homey warn
+            // about an empty battery that doesn't exist.
+            const batterySoC = Number.isFinite(readings.batterySoC) ? readings.batterySoC : null;
 
             await Promise.all([
                 this._updateProperty('measure_power', batteryPower),

@@ -39,3 +39,22 @@ test('Other batteries do not expose grid connection capabilities', () => {
         }
     }
 });
+
+test('Battery state of charge decodes SMA NaN as null, not 0', () => {
+    const settings = batteryRegistryHandler.getModbusRegistrySettings('STP 10.0-3SE-40');
+    const readings = batteryRegistryHandler.getReadingValues(settings, {
+        batterySoC: [0xFFFF, 0xFFFF]
+    });
+    assert.equal(readings.batterySoC, null);
+
+    const info = batteryRegistryHandler.getInfoValues(settings, {
+        batterySoCInfo: [0xFFFF, 0xFFFF]
+    });
+    assert.equal(info.batterySoCInfo, null);
+});
+
+test('Battery state of charge decodes real values, including 0', () => {
+    const settings = batteryRegistryHandler.getModbusRegistrySettings('STP 10.0-3SE-40');
+    assert.equal(batteryRegistryHandler.getReadingValues(settings, { batterySoC: [0, 57] }).batterySoC, 57);
+    assert.equal(batteryRegistryHandler.getInfoValues(settings, { batterySoCInfo: [0, 0] }).batterySoCInfo, 0);
+});

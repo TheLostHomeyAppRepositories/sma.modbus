@@ -15,6 +15,7 @@
     "verifying": "Verbinding met apparaat verifiëren ...",
     "failed": "Kan geen verbinding maken met het apparaat.",
     "invalid_address": "Voer een geldig IPv4-adres in, bijvoorbeeld 192.168.1.50.",
+    "no_battery_attached": "'__deviceType__' is een hybride omvormer zonder aangesloten batterij. Voeg hem toe als omvormer.",
     "connection_hint": "Controleer of het apparaat bereikbaar is op dit IP-adres en of Modbus TCP is ingeschakeld op het apparaat (standaardpoort 502). Bij oudere omvormers is Modbus standaard uitgeschakeld en wordt dit ingeschakeld met Sunny Explorer of de webinterface van het apparaat."
   },
   "repair": {
