@@ -25,6 +25,17 @@ const deviceCapabilitesList = [
     'measure_power.dcC'
 ];
 
+// Battery capabilities that inverters paired with older app versions (hybrid
+// models) still carry. Battery data now lives on the separate Battery device,
+// and setupCapabilities() only reconciles the list above, so these were never
+// removed - leaving a stale 0% battery (Homey's 'empty battery' warning) and a
+// permanently 'Not available' battery status on the inverter.
+const legacyCapabilitiesList = [
+    'measure_battery',
+    'measure_power.battery',
+    'operational_status.battery'
+];
+
 class InverterDevice extends ModbusDevice {
 
     #capabilityListenersRegistered = false;
@@ -34,6 +45,10 @@ class InverterDevice extends ModbusDevice {
     #lastPvSampleTs = null;
 
     async onInit() {
+        for (const capability of legacyCapabilitiesList) {
+            await this.removeCapabilityHelper(capability);
+        }
+
         await super.onInit();
         // Restore the integrated daily PV yield so a mid-day app restart doesn't
         // lose the day's accumulation. The sample timestamp is intentionally not
